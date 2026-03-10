@@ -1,6 +1,7 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 import os
 
+
 # not ideal to put that here
 os.environ["CUDA_HOME"] = os.environ["CONDA_PREFIX"]
 os.environ["LIDRA_SKIP_INIT"] = "true"
@@ -32,6 +33,7 @@ from sam3d_objects.pipeline.inference_pipeline_pointmap import InferencePipeline
 from sam3d_objects.model.backbone.tdfy_dit.utils import render_utils
 
 from sam3d_objects.utils.visualization import SceneVisualizer
+from omegaconf import open_dict
 
 __all__ = ["Inference"]
 
@@ -82,12 +84,16 @@ BLACKLIST_FILTERS = [
 class Inference:
     # public facing inference API
     # only put publicly exposed arguments here
-    def __init__(self, config_file: str, compile: bool = False):
-        # load inference pipeline
+ 
+    def __init__(self, config_file: str, compile: bool = False, overrides=None):
         config = OmegaConf.load(config_file)
         config.rendering_engine = "pytorch3d"  # overwrite to disable nvdiffrast
         config.compile_model = compile
         config.workspace_dir = os.path.dirname(config_file)
+
+        if overrides:
+            config = OmegaConf.merge(config, OmegaConf.from_dotlist(overrides))
+
         check_hydra_safety(config, WHITELIST_FILTERS, BLACKLIST_FILTERS)
         self._pipeline: InferencePipelinePointMap = instantiate(config)
 
